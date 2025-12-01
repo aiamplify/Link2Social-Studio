@@ -636,52 +636,102 @@ export async function generateBlogFromArticle(
     }
 
     const writingPrompt = `
-    You are an expert technical writer and professional blogger.
-    
+    You are an expert technical writer and professional blogger who creates visually stunning, highly engaging content for major tech publications.
+
     Your task:
     ${contextPrompt}
-    
+
     2. USER INSTRUCTIONS: "${instructions}"
-    
-    3. Write a COMPLETELY NEW, ORIGINAL blog post. 
+
+    3. Write a COMPLETELY NEW, ORIGINAL blog post.
        - ${source.type === 'url' ? "Do NOT just summarize the existing article. Add a fresh perspective." : "Create a comprehensive post based on the findings."}
-       - The tone should be engaging, professional, and visually varied.
+       - The tone should be engaging, professional, and visually rich.
        - APPROXIMATE LENGTH: ${wordCount} words.
-       - FORMATTING REQUIREMENTS (CRITICAL):
-         - Use RICH MARKDOWN formatting.
-         - Structure content with clear Header Levels: # Title, ## Section, ### Subsection.
-         - Use **Bold** for strong emphasis.
-         - Use *Italic* for subtle emphasis.
-         - Use bulleted lists (-) for readability.
-         - STYLING INSTRUCTION: You MUST use HTML tags for specific visual emphasis:
-            - Use <span class="blue">text</span> to highlight key concepts, terminology, or important phrases in BLUE.
-            - Use <u>text</u> to underline critical points that need attention.
-    
-    4. VISUAL PLACEMENT:
-       - You must generate ${imageCount} DISTINCT visual concepts to accompany the post.
-       - The first visual will be the Header Image.
-       - For the remaining ${Math.max(0, imageCount - 1)} visuals, you MUST insert a placeholder marker EXACTLY like this: [[IMAGE_X]] (where X is the number, e.g., [[IMAGE_1]], [[IMAGE_2]]) directly into the markdown text flow where the image should visually appear (e.g., after a relevant paragraph).
-    
+
+    4. FORMATTING REQUIREMENTS (CRITICAL - Follow these EXACTLY):
+
+       **STRUCTURE & HEADERS:**
+       - Use a HIERARCHICAL structure with CATEGORY HEADERS and NUMBERED SECTIONS
+       - Category headers (##) group related content: "## Simplify the cooking process", "## Get creative with AI", "## Enjoy the party with your guests"
+       - Numbered section headers (###) within categories: "### 1. Chat with Gemini Live on the go", "### 2. Use Nano Banana Pro for creative pics"
+       - Number your sections sequentially throughout the entire post (1, 2, 3, 4, etc.)
+
+       **TEXT STYLING (CRITICAL - You MUST use these):**
+       - <span class="highlight-link">text</span> for product names, feature names, and key terms that should appear as blue clickable-looking links (e.g., "With <span class="highlight-link">Gemini Live</span> in the Gemini app...")
+       - **Bold text** for key statements and important subtitles (e.g., "**Generate more accurate, context-rich visuals based on enhanced reasoning**")
+       - *Italic* for subtle emphasis or quotes
+       - Use bulleted lists (-) for readability when listing features or steps
+
+       **PARAGRAPH STYLE:**
+       - Write in a conversational, engaging tone
+       - Start sections with context-setting sentences
+       - Include practical examples and use cases
+       - Reference specific features or capabilities by name using <span class="highlight-link">feature name</span>
+
+    5. VISUAL PLACEMENT:
+       - Generate ${imageCount} DISTINCT visual concepts to accompany the post.
+       - The first visual = Header Image (wide, cinematic)
+       - For remaining visuals, insert [[IMAGE_X]] markers directly in the content where they should appear
+       - IMPORTANT: After each [[IMAGE_X]] marker, add a caption line in this exact format:
+         [[IMAGE_X]]
+         <figcaption>Description of what the image shows</figcaption>
+         <prompt-note>Prompt: "The prompt used to create this image or context about it"</prompt-note>
+       - You can group 2-3 related images together for a carousel effect by placing them consecutively:
+         [[IMAGE_CAROUSEL_START]]
+         [[IMAGE_X]]
+         <figcaption>First image caption</figcaption>
+         [[IMAGE_Y]]
+         <figcaption>Second image caption</figcaption>
+         [[IMAGE_CAROUSEL_END]]
+
     The blog post must be written in ${language}.
     The visual prompts must be in English.
-    
+
     RETURN FORMAT:
     Use strict delimiters.
-    
+
     |||TITLE|||
-    (Insert Main Title Here)
+    (Main title - compelling and clear)
     |||SUBTITLE|||
-    (Insert a short, engaging subtitle here)
+    (Engaging subtitle that hooks the reader)
     |||METADATA|||
     (Insert "Author Name | Date | Category")
     |||CONTENT|||
-    (Insert Full Markdown Content Here, starting with Introduction, and including [[IMAGE_X]] markers within the body. Do not repeat Title/Subtitle)
-    
+    (Full content with:
+     - ## Category Headers grouping related sections
+     - ### Numbered sections like "### 1. Feature Name"
+     - <span class="highlight-link">product names</span> styled as links
+     - **Bold key statements**
+     - [[IMAGE_X]] markers with <figcaption> and optional <prompt-note> below each
+     - Use [[IMAGE_CAROUSEL_START]] and [[IMAGE_CAROUSEL_END]] to group related images)
+
     |||VISUALS|||
     (List the ${imageCount} visual prompts strictly in this format:)
-    1. PROMPT: [Detailed prompt] || CAPTION: [Short caption]
-    2. PROMPT: [Detailed prompt] || CAPTION: [Short caption]
+    1. PROMPT: [Detailed, specific prompt for high-quality image] || CAPTION: [Descriptive caption explaining the image]
+    2. PROMPT: [Detailed prompt] || CAPTION: [Caption]
     ...
+
+    EXAMPLE CONTENT SNIPPET:
+    ## Get creative with your gatherings
+
+    ### 1. Chat with Gemini Live on the go
+
+    If you find yourself wondering about decoration ideas, just open <span class="highlight-link">Gemini Live</span> in the Gemini app to brainstorm together. Thanks to its <span class="highlight-link">camera and screen sharing</span> capabilities, you can have a back-and-forth conversation about anything you see.
+
+    [[IMAGE_1]]
+    <figcaption>Gemini Live helping with creative decoration ideas in real-time</figcaption>
+
+    ### 2. Use Nano Banana Pro for creative pics
+
+    <span class="highlight-link">Nano Banana Pro</span>, our latest image generation model, can help you create stunning visuals. **Generate more accurate, context-rich visuals based on enhanced reasoning, world knowledge and real-time information.**
+
+    [[IMAGE_CAROUSEL_START]]
+    [[IMAGE_2]]
+    <figcaption>An infographic of the String of Turtles plant with care information</figcaption>
+    <prompt-note>Prompt: "Create an infographic about this plant focusing on interesting information."</prompt-note>
+    [[IMAGE_3]]
+    <figcaption>A visualization of weather data for the upcoming week</figcaption>
+    [[IMAGE_CAROUSEL_END]]
     `;
 
     let visuals: BlogVisual[] = [];
