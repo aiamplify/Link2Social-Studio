@@ -39,9 +39,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onPublishPost, onLogout }) => {
         setHasApiKey(has);
       } else {
         // For local development, check if API key exists in environment
+        // Vite injects process.env.API_KEY at build time as a string literal
         // @ts-ignore - process.env is injected by Vite
-        const hasLocalKey = typeof process !== 'undefined' && process.env && process.env.API_KEY;
-        setHasApiKey(!!hasLocalKey);
+        const apiKey = process.env.API_KEY;
+        const hasLocalKey = apiKey && apiKey !== 'undefined' && apiKey.length > 0;
+        console.log('API Key check:', hasLocalKey ? 'Found' : 'Not found');
+        setHasApiKey(hasLocalKey);
       }
       setCheckingKey(false);
     };
