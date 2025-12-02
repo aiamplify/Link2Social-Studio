@@ -380,18 +380,153 @@ const BlogToBlog: React.FC<BlogToBlogProps> = ({ onPublish }) => {
     const generateHtmlCode = () => {
         if (!result) return "";
         const font = getActiveFont();
-        
-        let html = `<!-- Blog Post: ${result.title} -->\n`;
-        html += `<article class="blog-content" style="font-family: ${font};">\n`;
-        html += `  <h1>${result.title}</h1>\n`;
-        if (result.subtitle) {
-            html += `  <p class="subtitle">${result.subtitle}</p>\n`;
+
+        // Generate clean HTML content without the full document wrapper for CMS pasting
+        let html = `<!-- Blog Post: ${result.title} -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Inter:wght@400;600;800&family=Playfair+Display:wght@400;700&family=Open+Sans:wght@400;600&family=Roboto:wght@400;700&display=swap');
+
+  /* Base Typography */
+  .blog-content { font-family: ${font || 'sans-serif'}; line-height: 1.8; color: #334155; max-width: 800px; margin: 0 auto; }
+  .blog-content h1, .blog-content h2, .blog-content h3 { font-family: 'Inter', sans-serif; color: #0f172a; }
+  .blog-content h1 { font-size: 2.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 0.5em; }
+  .blog-content h2 { font-size: 1.75rem; font-weight: 700; margin-top: 2.5em; margin-bottom: 1em; color: #1e293b; }
+  .blog-content h3 { font-size: 1.4rem; font-weight: 600; margin-top: 2em; margin-bottom: 0.75em; color: #1e293b; }
+  .blog-content p { margin-bottom: 1.5em; font-size: 1.1rem; }
+
+  /* Metadata & Subtitle */
+  .blog-meta { font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 2em; letter-spacing: 0.05em; }
+  .blog-subtitle { font-size: 1.25rem; color: #475569; margin-bottom: 1.5em; font-style: italic; line-height: 1.6; }
+
+  /* Highlight Links - Blue clickable-looking text */
+  .highlight-link { color: #2563eb; font-weight: 500; text-decoration: none; cursor: pointer; }
+  .highlight-link:hover { text-decoration: underline; }
+  .blue { color: #2563eb; font-weight: 500; }
+
+  /* Images & Figures */
+  .blog-content figure { margin: 2em 0; }
+  .blog-content img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+  .blog-content figcaption { text-align: center; font-size: 0.9rem; color: #64748b; margin-top: 1em; line-height: 1.5; }
+  .blog-content .prompt-note { text-align: center; font-size: 0.85rem; color: #94a3b8; font-style: italic; margin-top: 0.5em; }
+
+  /* Image Carousel */
+  .image-carousel { position: relative; margin: 2em 0; overflow: hidden; border-radius: 12px; background: #f8fafc; }
+  .carousel-track { display: flex; transition: transform 0.3s ease-in-out; }
+  .carousel-slide { min-width: 100%; box-sizing: border-box; padding: 1em; }
+  .carousel-slide img { width: 100%; border-radius: 8px; }
+  .carousel-slide figcaption { padding: 0.5em 0; }
+  .carousel-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.9); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2em; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; }
+  .carousel-nav:hover { background: white; }
+  .carousel-nav.prev { left: 10px; }
+  .carousel-nav.next { right: 10px; }
+  .carousel-dots { display: flex; justify-content: center; gap: 8px; padding: 1em 0; }
+  .carousel-dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; cursor: pointer; border: none; }
+  .carousel-dot.active { background: #3b82f6; }
+
+  /* Lists */
+  .blog-content ul { margin: 1em 0 1.5em 1.5em; }
+  .blog-content li { margin-bottom: 0.5em; font-size: 1.1rem; }
+</style>
+
+<article class="blog-content">
+  <h1>${result.title}</h1>
+  ${result.subtitle ? `<p class="blog-subtitle">${result.subtitle}</p>` : ''}
+  <div class="blog-meta">${result.metadata}</div>
+`;
+
+        // Header Image
+        const headerImg = result.visuals.find(v => v.id === "header");
+        if (headerImg?.imageData) {
+            html += `  <figure>\n    <img src="data:image/png;base64,${headerImg.imageData}" alt="${headerImg.caption}" />\n    <figcaption>${headerImg.caption}</figcaption>\n  </figure>\n`;
         }
-        html += `  <div class="meta">${result.metadata}</div>\n`;
-        html += `  <!-- Content -->\n`;
-        html += `  ${editContent.replace(/\n/g, '\n  ')}\n`;
-        html += `</article>`;
-        
+
+        // Body Content replacement
+        let processedContent = editContent;
+
+        // Remove carousel markers for now - we'll process them separately
+        processedContent = processedContent.replace(/\[\[IMAGE_CAROUSEL_START\]\]/g, '<div class="image-carousel"><div class="carousel-track">');
+        processedContent = processedContent.replace(/\[\[IMAGE_CAROUSEL_END\]\]/g, '</div><div class="carousel-dots"></div></div>');
+
+        // Convert Markdown to HTML tags
+        processedContent = processedContent
+          .replace(/^# (.*$)/gim, '') // Remove H1 as we added title manually
+          .replace(/^## (.*$)/gim, '  <h2>$1</h2>')
+          .replace(/^### (.*$)/gim, '  <h3>$1</h3>')
+          .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+          .replace(/^\- (.*$)/gim, '  <li>$1</li>')
+          .replace(/<prompt-note>(.*?)<\/prompt-note>/gis, '<p class="prompt-note">$1</p>')
+          .replace(/\n\n/gim, '</p>\n  <p>')
+          .replace(/<\/li>\n  <p>/g, '</li>\n')
+          .replace(/<\/p><li>/g, '<ul><li>') // Basic list start handling
+          .replace(/<\/li><\/ul>/g, '</li></ul>')
+          .replace(/^([^<].*)/, '  <p>$1'); // Wrap start
+
+        // Replace image placeholders
+        result.visuals.forEach((v, idx) => {
+            if (v.id !== 'header') {
+               const placeholder = `[[IMAGE_${v.id.split('_')[1]}]]`;
+               if (processedContent.includes(placeholder) && v.imageData) {
+                   // Check if inside carousel
+                   const isInCarousel = processedContent.indexOf(placeholder) > processedContent.lastIndexOf('carousel-track') &&
+                                        processedContent.indexOf(placeholder) < processedContent.indexOf('carousel-dots', processedContent.lastIndexOf('carousel-track'));
+
+                   const imgTag = isInCarousel
+                       ? `<div class="carousel-slide"><figure><img src="data:image/png;base64,${v.imageData}" alt="${v.caption}" /><figcaption>${v.caption}</figcaption></figure></div>`
+                       : `</p>\n  <figure>\n    <img src="data:image/png;base64,${v.imageData}" alt="${v.caption}" />\n    <figcaption>${v.caption}</figcaption>\n  </figure>\n  <p>`;
+                   processedContent = processedContent.replace(placeholder, imgTag);
+               } else {
+                   processedContent = processedContent.replace(placeholder, '');
+               }
+            }
+        });
+
+        html += processedContent;
+
+        // Add carousel JavaScript if carousels exist
+        if (processedContent.includes('image-carousel')) {
+            html += `
+<script>
+document.querySelectorAll('.image-carousel').forEach((carousel, carouselIdx) => {
+  const track = carousel.querySelector('.carousel-track');
+  const slides = carousel.querySelectorAll('.carousel-slide');
+  const dotsContainer = carousel.querySelector('.carousel-dots');
+  let currentSlide = 0;
+
+  // Create dots
+  slides.forEach((_, idx) => {
+    const dot = document.createElement('button');
+    dot.className = 'carousel-dot' + (idx === 0 ? ' active' : '');
+    dot.onclick = () => goToSlide(idx);
+    dotsContainer.appendChild(dot);
+  });
+
+  // Create nav buttons
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'carousel-nav prev';
+  prevBtn.innerHTML = '‹';
+  prevBtn.onclick = () => goToSlide(currentSlide - 1);
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'carousel-nav next';
+  nextBtn.innerHTML = '›';
+  nextBtn.onclick = () => goToSlide(currentSlide + 1);
+
+  carousel.appendChild(prevBtn);
+  carousel.appendChild(nextBtn);
+
+  function goToSlide(idx) {
+    currentSlide = (idx + slides.length) % slides.length;
+    track.style.transform = 'translateX(-' + (currentSlide * 100) + '%)';
+    dotsContainer.querySelectorAll('.carousel-dot').forEach((d, i) => {
+      d.className = 'carousel-dot' + (i === currentSlide ? ' active' : '');
+    });
+  }
+});
+</script>`;
+        }
+
+        html += `\n</article>`;
         return html;
     };
 
@@ -401,12 +536,29 @@ const BlogToBlog: React.FC<BlogToBlogProps> = ({ onPublish }) => {
         return 'red';
     };
 
+    // Helper to render content with inline interactive images
     const renderContentWithImages = () => {
         if (!result) return null;
-        
-        const parts = editContent.split(/(\[\[IMAGE_\d+\]\])/g);
-        const fontStyle = { fontFamily: getActiveFont().split(',')[0] };
-        
+
+        // Clean content - remove carousel markers and figcaption/prompt-note tags for preview parsing
+        let cleanContent = editContent
+            .replace(/\[\[IMAGE_CAROUSEL_START\]\]/g, '')
+            .replace(/\[\[IMAGE_CAROUSEL_END\]\]/g, '');
+
+        const parts = cleanContent.split(/(\[\[IMAGE_\d+\]\])/g);
+        const fontStyle = { fontFamily: getActiveFont().split(',')[0] }; // Simple apply for preview
+
+        // Track figcaptions and prompt notes for each image
+        const extractCaptionAndPrompt = (content: string, imageIndex: number) => {
+            const regex = new RegExp(`\\[\\[IMAGE_${imageIndex}\\]\\]\\s*(?:<figcaption>(.*?)<\\/figcaption>)?\\s*(?:<prompt-note>(.*?)<\\/prompt-note>)?`, 'is');
+            const match = editContent.match(regex);
+            return {
+                figcaption: match?.[1]?.trim() || null,
+                promptNote: match?.[2]?.trim() || null
+            };
+        };
+
+        // We render this in "Dark Mode" for the App UI, but using the fonts requested.
         return (
             <div className="text-[1.1rem] leading-[1.8] text-slate-300" style={fontStyle}>
                 {parts.map((part, idx) => {
@@ -414,59 +566,87 @@ const BlogToBlog: React.FC<BlogToBlogProps> = ({ onPublish }) => {
                     if (match) {
                         const imgIndex = parseInt(match[1]);
                         const visual = result.visuals.find(v => v.id === `image_${imgIndex}`);
-                        
+                        const { figcaption, promptNote } = extractCaptionAndPrompt(editContent, imgIndex);
+
                         if (visual) {
                             return (
                                 <div key={idx} className="my-12 group relative rounded-xl overflow-hidden shadow-lg border border-white/10 bg-slate-950">
-                                    {visual.imageData ? (
-                                        <img src={`data:image/png;base64,${visual.imageData}`} alt={visual.caption} className="w-full h-auto object-cover" />
-                                    ) : (
-                                        <div className="flex items-center justify-center h-64 w-full bg-slate-900 text-slate-500 text-sm">Generating Visual...</div>
-                                    )}
-                                    
-                                    <div className="py-3 px-4 text-center text-sm font-medium text-slate-400 bg-slate-900/80 border-t border-white/5 italic">
-                                        {visual.caption}
-                                    </div>
+                                     {visual.imageData ? (
+                                         <img src={`data:image/png;base64,${visual.imageData}`} alt={visual.caption} className="w-full h-auto object-cover" />
+                                     ) : (
+                                         <div className="flex items-center justify-center h-64 w-full bg-slate-900 text-slate-500 text-sm">Generating Visual...</div>
+                                     )}
 
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm z-10">
-                                        <div className="flex gap-2">
-                                            <button 
-                                                onClick={() => handleRegenerateImage(visual)}
-                                                disabled={regeneratingId === visual.id}
-                                                className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 rounded-lg text-white text-xs font-bold flex items-center gap-2 transition-colors"
-                                            >
-                                                {regeneratingId === visual.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                                Re-Roll
-                                            </button>
-                                            <button 
-                                                onClick={() => triggerImageUpload(visual.id)}
-                                                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white text-xs font-bold flex items-center gap-2 transition-colors border border-white/10"
-                                            >
-                                                <Upload className="w-3 h-3" /> Replace
-                                            </button>
-                                        </div>
-                                    </div>
+                                     {/* Caption & Prompt Note */}
+                                     <div className="py-3 px-4 text-center bg-slate-900/80 border-t border-white/5">
+                                         <div className="text-sm font-medium text-slate-400 font-sans">
+                                             {figcaption || visual.caption}
+                                         </div>
+                                         {promptNote && (
+                                             <div className="text-xs text-slate-500 mt-1 italic font-sans">
+                                                 {promptNote}
+                                             </div>
+                                         )}
+                                     </div>
+
+                                     {/* Controls Overlay */}
+                                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm z-10">
+                                         <div className="flex gap-2">
+                                              <button
+                                                  onClick={() => handleRegenerateImage(visual)}
+                                                  disabled={regeneratingId === visual.id}
+                                                  className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 rounded-lg text-white text-xs font-bold flex items-center gap-2 transition-colors font-sans"
+                                              >
+                                                  {regeneratingId === visual.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                                  Re-Roll
+                                              </button>
+                                              <button
+                                                  onClick={() => triggerImageUpload(visual.id)}
+                                                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white text-xs font-bold flex items-center gap-2 transition-colors border border-white/10 font-sans"
+                                              >
+                                                  <Upload className="w-3 h-3" /> Replace
+                                              </button>
+                                         </div>
+                                         <span className="text-[10px] text-slate-300 font-mono max-w-[80%] text-center px-4">{visual.prompt}</span>
+                                     </div>
                                 </div>
                             );
                         }
                         return null;
                     } else {
-                        return (
-                            <span key={idx} className="prose prose-invert max-w-none">
-                                {part.split('\n').map((line, i) => {
-                                    if (!line.trim()) return <br key={i}/>;
-                                    if (line.startsWith('# ')) return null;
-                                    if (line.startsWith('## ')) return <h2 key={i} className="text-2xl font-bold mt-12 mb-6 text-white">{line.replace('## ', '')}</h2>;
-                                    if (line.startsWith('### ')) return <h3 key={i} className="text-xl font-bold mt-10 mb-4 text-slate-200">{line.replace('### ', '')}</h3>;
-                                    if (line.startsWith('- ')) return <li key={i} className="ml-4 list-disc mb-3 pl-2">{line.replace('- ', '')}</li>;
-                                    
-                                    const richText = line
-                                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                        .replace(/<span class="blue">(.*?)<\/span>/g, '<span class="text-orange-400 font-semibold">$1</span>')
-                                        .replace(/<u>(.*?)<\/u>/g, '<span class="underline decoration-orange-500 decoration-2 underline-offset-4">$1</span>');
+                        // Render Markdown Text - skip figcaption and prompt-note tags
+                        const filteredPart = part
+                            .replace(/<figcaption>.*?<\/figcaption>/gis, '')
+                            .replace(/<prompt-note>.*?<\/prompt-note>/gis, '');
 
-                                    return <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: richText }} />;
-                                })}
+                        return (
+                            <span key={idx} className="prose prose-invert max-w-none prose-headings:font-sans prose-headings:font-bold prose-headings:text-white prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-white prose-strong:font-bold">
+                               {filteredPart.split('\n').map((line, i) => {
+                                   if (!line.trim()) return <br key={i}/>;
+                                   if (line.startsWith('# ')) return null; // Skip title as handled elsewhere
+
+                                   // Category headers (larger, bolder)
+                                   if (line.startsWith('## ')) {
+                                       return <h2 key={i} className="text-2xl font-bold mt-14 mb-6 font-sans text-white border-b border-white/10 pb-3">{line.replace('## ', '')}</h2>;
+                                   }
+
+                                   // Numbered section headers
+                                   if (line.startsWith('### ')) {
+                                       return <h3 key={i} className="text-xl font-semibold mt-10 mb-4 font-sans text-slate-200">{line.replace('### ', '')}</h3>;
+                                   }
+
+                                   if (line.startsWith('- ')) return <li key={i} className="ml-4 list-disc mb-3 pl-2">{line.replace('- ', '')}</li>;
+
+                                   // Rich Text Parsing for styled elements
+                                   const richText = line
+                                      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+                                      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                      .replace(/<span class="highlight-link">(.*?)<\/span>/g, '<span class="text-blue-400 font-medium hover:underline cursor-pointer">$1</span>')
+                                      .replace(/<span class="blue">(.*?)<\/span>/g, '<span class="text-blue-400 font-medium">$1</span>')
+                                      .replace(/<u>(.*?)<\/u>/g, '<span class="underline decoration-orange-500 decoration-2 underline-offset-4">$1</span>');
+
+                                   return <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: richText }} />;
+                               })}
                             </span>
                         );
                     }

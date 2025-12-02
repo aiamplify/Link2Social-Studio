@@ -4,7 +4,7 @@
 */
 
 import React from 'react';
-import { ViewMode } from '../types';
+import { ViewMode } from './types';
 import { FileText, Link, BrainCircuit, Image, Sparkles, ArrowRight, Share2 } from 'lucide-react';
 
 interface HomeProps {
